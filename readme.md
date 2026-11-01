@@ -43,3 +43,94 @@ The following topics will be considered:
   - [ADR-006: In-Memory Caching Strategy (Caffeine)](docs/technical-decisions.md#adr-006-in-memory-caching-strategy-caffeine)
 - **[Performance & Resilience Benchmark Report](docs/performance.md)**: Full k6 test metrics (200 constant VUs, 0% errors, 24.3ms avg latency).
 
+## How to Run & Test the Application
+
+### 1. Start Infrastructure & Upstream Mocks
+Start the mock dependencies before running the application:
+```bash
+docker-compose up -d simulado influxdb grafana
+```
+Verify the mock is responding:
+```bash
+curl http://localhost:3001/product/1/similarids
+```
+
+### 2. Start the Application
+The application listens on port `5000` (`server.port=5000`).
+
+#### Option A: Running in Docker (Recommended — Zero Host Prerequisites)
+This approach requires only Docker and guarantees an exact Java 21 LTS runtime without needing Java or Maven installed on the host machine:
+
+```bash
+# 1. Package the JAR using a Maven 3.9 + Java 21 container
+docker run --rm -v "${PWD}:/app" -v "m2-cache:/root/.m2" -w /app maven:3.9.9-eclipse-temurin-21 mvn clean package -DskipTests
+
+# 2. Run the application container connected to the compose network
+docker run -d --name similar-products-app \
+  --network itx-backend-test_default \
+  -p 5000:5000 \
+  -e UPSTREAM_CATALOG_BASE_URL=http://simulado:80 \
+  -v "${PWD}/target:/app" \
+  eclipse-temurin:21-jre java -jar /app/similar-products-0.0.1-SNAPSHOT.jar
+```
+
+Verify that the application is running:
+```bash
+curl http://localhost:5000/actuator/health
+# Returns: {"status":"UP"}
+```
+
+#### Option B: Running Locally (Requires Java 21 LTS & Maven 3.9+)
+If you have Java 21 and Maven pre-installed and available on your system `PATH`:
+
+```bash
+mvn spring-boot:run
+```
+Or package and run the JAR directly:
+```bash
+mvn clean package -DskipTests
+java -jar target/similar-products-0.0.1-SNAPSHOT.jar
+```
+
+### 3. Test the Application
+
+#### Automated Test Suite
+Run the 41 automated tests (unit, integration with `MockRestServiceServer`, and live E2E):
+
+```bash
+# Via Docker (Recommended — zero local setup):
+docker run --rm --network itx-backend-test_default -v "${PWD}:/app" -v "m2-cache:/root/.m2" -w /app maven:3.9.9-eclipse-temurin-21 mvn test
+
+# Or using local Maven (if Java 21 is installed):
+mvn test
+```
+
+#### Manual Endpoint Verification
+Sample requests verifying core behaviors:
+```bash
+# Standard lookup (returns products 2, 3, 4 in similarity order)
+curl -s http://localhost:5000/product/1/similar
+
+# Timeout truncation (5s & 50s delays truncated at 2.5s; returns product 100 in <3s)
+curl -s http://localhost:5000/product/3/similar
+
+# In-memory cache hit (repeated query returns in <10ms from Caffeine cache)
+curl -s http://localhost:5000/product/3/similar
+
+# Defensive degradation (product 5 returns 404 upstream; omitted, returns products 1 and 2)
+curl -s http://localhost:5000/product/4/similar
+
+# Defensive degradation (product 6 returns 500 upstream; omitted, returns products 1 and 2)
+curl -s http://localhost:5000/product/5/similar
+
+# Root product not found (returns 404 Not Found)
+curl -s -i http://localhost:5000/product/999/similar
+```
+
+#### Performance Benchmark (k6)
+Run the k6 load generator (200 constant virtual users across all 5 scenarios):
+```bash
+docker-compose run --rm k6 run scripts/test.js
+```
+Telemetry results can be inspected in real time on Grafana at [http://localhost:3000/d/Le2Ku9NMk/k6-performance-test](http://localhost:3000/d/Le2Ku9NMk/k6-performance-test).
+
