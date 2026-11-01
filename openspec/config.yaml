@@ -1,32 +1,37 @@
 schema: spec-driven
 
-# Project context (optional)
-# Add only constraints that should guide OpenSpec artifacts and workflows.
-# Include constraints an agent cannot infer by reading the code.
-# Keep general project documentation and discoverable codebase facts out.
-# Example:
-#   context: |
-#     Designs and tasks must cover Windows, macOS, and Linux
-#     Write all artifacts in Spanish
+context: |
+  - Tech Stack: Java 21 LTS, Spring Boot 3.x, Spring MVC with Virtual Threads (`spring.threads.virtual.enabled=true`), Spring `RestClient` with HTTP connection pooling.
+  - Architectural Style: Hexagonal / Clean Architecture (Domain, Application Use Cases, Infrastructure/Adapters).
+  - Service Ports & Contracts:
+    - Application must expose `GET /product/{productId}/similar` on port 5000, conforming strictly to `similarProducts.yaml`.
+    - Upstream dependencies run on port 3001 (Simulado mock service) conforming to `existingApis.yaml`.
+  - Concurrency & Performance:
+    - Parallel fan-out for fetching similar product details using Java 21 Virtual Threads (`Executors.newVirtualThreadPerTaskExecutor()`).
+    - In-memory Caffeine cache with short TTL (10-30s) for product details and similar IDs (ADR-006).
+    - Must handle 200 constant virtual users in k6 performance benchmarks (`docker-compose run --rm k6 run scripts/test.js`).
+  - Resilience & Error Semantics:
+    - Strict 2.5s timeout per upstream call to mitigate artificial latency spikes up to 50s (ADR-004).
+    - Graceful degradation: omit unavailable, failing (4xx/5xx), or timed-out similar products, returning all successfully fetched items (ADR-003).
+    - Root product missing returns HTTP 404; existing root product with no similar items returns HTTP 200 with `[]` (ADR-005).
+  - Artifact Language: English for all OpenSpec artifacts, specifications, commit messages, and documentation.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always state what is out of scope
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - Trace proposal to backlog item (e.g. ITX-xxx) and reference relevant ADRs from `docs/technical-decisions.md`.
+    - Explicitly state scope boundaries (what is in scope and what is out of scope).
+  design:
+    - Specify package and layer structure adhering to Hexagonal/Clean Architecture.
+    - Detail error handling, timeout configurations, and virtual thread executor definitions.
+  tasks:
+    - Structure tasks in small, test-driven increments (domain models -> ports/adapters -> use cases -> controllers -> integration tests).
+    - Include explicit verification tasks for Docker mocks and performance testing via k6.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+operations:
+  apply:
+    guidance:
+      - Prioritize automated tests (unit + integration with MockRestServiceServer/WireMock) before implementation code.
+      - Never diverge silently from specs; if requirements drift during coding, run `/opsx:sync` first.
+  archive:
+    guidance:
+      - Ensure living specifications in `openspec/specs/` accurately reflect the final implemented behavior.
