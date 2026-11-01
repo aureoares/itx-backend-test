@@ -58,6 +58,8 @@ flowchart TD
 
 - [ADR-001: Java 21 LTS](technical-decisions.md#adr-001-java-version)
 - [ADR-002: Framework Stack & Concurrency Model (Spring MVC with Virtual Threads)](technical-decisions.md#adr-002-framework-stack--concurrency-model-spring-mvc-with-virtual-threads-over-webflux)
-- [ADR-003: Graceful Degradation for Downstream Failures](technical-decisions.md#adr-003-graceful-degradation-for-downstream-partial-failures)
-- [ADR-004: Strict Upstream Call Timeout](technical-decisions.md#adr-004-strict-upstream-call-timeout)
-- [ADR-006: In-Memory Caching Strategy](technical-decisions.md#adr-006-in-memory-caching-strategy-with-caffeine)
+- [ADR-003: Downstream Partial Failure Handling (Graceful Degradation)](technical-decisions.md#adr-003-downstream-partial-failure-handling-graceful-degradation)
+- [ADR-004: Timeout Strategy for Upstream Dependencies](technical-decisions.md#adr-004-timeout-strategy-for-upstream-dependencies)
+- [ADR-005: Root Product 404 vs. Empty List Semantics](technical-decisions.md#adr-005-root-product-404-vs-empty-list-semantics)
+- [ADR-006: In-Memory Caching Strategy (Caffeine)](technical-decisions.md#adr-006-in-memory-caching-strategy-caffeine)
+- [Performance & Resilience Benchmark Report](performance.md)

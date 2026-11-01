@@ -31,3 +31,15 @@ The following topics will be considered:
 - Code clarity and maintainability
 - Performance
 - Resilience
+
+## Architecture & Engineering Standards
+- **[System Topology & Boundaries](docs/topology.md)**: Ports, protocols, network diagrams, and service interactions.
+- **[Architectural Decision Records (ADRs)](docs/technical-decisions.md)**:
+  - [ADR-001: Java 21 LTS](docs/technical-decisions.md#adr-001-java-version)
+  - [ADR-002: Framework Stack & Concurrency Model (Spring MVC + Virtual Threads)](docs/technical-decisions.md#adr-002-framework-stack--concurrency-model-spring-mvc-with-virtual-threads-over-webflux)
+  - [ADR-003: Downstream Partial Failure Handling (Graceful Degradation)](docs/technical-decisions.md#adr-003-downstream-partial-failure-handling-graceful-degradation)
+  - [ADR-004: Strict Upstream Call Timeout (2.5s)](docs/technical-decisions.md#adr-004-timeout-strategy-for-upstream-dependencies)
+  - [ADR-005: Root Product 404 vs. Empty List Semantics](docs/technical-decisions.md#adr-005-root-product-404-vs-empty-list-semantics)
+  - [ADR-006: In-Memory Caching Strategy (Caffeine)](docs/technical-decisions.md#adr-006-in-memory-caching-strategy-caffeine)
+- **[Performance & Resilience Benchmark Report](docs/performance.md)**: Full k6 test metrics (200 constant VUs, 0% errors, 24.3ms avg latency).
+

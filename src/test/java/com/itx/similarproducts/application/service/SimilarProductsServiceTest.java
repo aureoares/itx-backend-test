@@ -125,4 +125,33 @@ class SimilarProductsServiceTest {
 
         assertThat(result).containsExactly(product1, product2);
     }
+
+    @Test
+    void shouldOmitFailedProductWhenDetailCallThrowsExceptionDefensively() {
+        when(productCatalogPort.getSimilarProductIds("5")).thenReturn(List.of("1", "2", "6"));
+
+        ProductDetail product1 = new ProductDetail("1", "Shirt", 9.99, true);
+        ProductDetail product2 = new ProductDetail("2", "Dress", 19.99, true);
+
+        when(productCatalogPort.getProductDetail("1")).thenReturn(Optional.of(product1));
+        when(productCatalogPort.getProductDetail("2")).thenReturn(Optional.of(product2));
+        when(productCatalogPort.getProductDetail("6")).thenThrow(new RuntimeException("Simulated upstream 500 error"));
+
+        List<ProductDetail> result = service.getSimilarProducts("5");
+
+        // Failsafe: item 6 is omitted, items 1 and 2 returned in order
+        assertThat(result).containsExactly(product1, product2);
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenAllSimilarProductsFailOrAreEmpty() {
+        when(productCatalogPort.getSimilarProductIds("8")).thenReturn(List.of("5", "6"));
+
+        when(productCatalogPort.getProductDetail("5")).thenReturn(Optional.empty());
+        when(productCatalogPort.getProductDetail("6")).thenThrow(new RuntimeException("Simulated timeout"));
+
+        List<ProductDetail> result = service.getSimilarProducts("8");
+
+        assertThat(result).isEmpty();
+    }
 }

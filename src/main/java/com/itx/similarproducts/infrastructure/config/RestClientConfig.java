@@ -20,10 +20,10 @@ public class RestClientConfig {
     @Value("${upstream.catalog.base-url:http://localhost:3001}")
     private String upstreamBaseUrl;
 
-    @Value("${upstream.catalog.connect-timeout-ms:1000}")
+    @Value("${upstream.catalog.connect-timeout-ms:500}")
     private int connectTimeoutMs;
 
-    @Value("${upstream.catalog.read-timeout-ms:5000}")
+    @Value("${upstream.catalog.read-timeout-ms:2500}")
     private int readTimeoutMs;
 
     @Value("${upstream.catalog.max-total-connections:500}")

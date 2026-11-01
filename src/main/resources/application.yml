@@ -20,7 +20,12 @@ management:
 upstream:
   catalog:
     base-url: ${UPSTREAM_CATALOG_BASE_URL:http://localhost:3001}
-    connect-timeout-ms: 1000
-    read-timeout-ms: 5000
+    connect-timeout-ms: 500
+    read-timeout-ms: 2500
     max-connections-per-route: 200
     max-total-connections: 500
+
+cache:
+  catalog:
+    ttl-seconds: 20
+    maximum-size: 5000

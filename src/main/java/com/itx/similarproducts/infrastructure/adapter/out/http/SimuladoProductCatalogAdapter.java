@@ -5,6 +5,10 @@ import com.itx.similarproducts.domain.exception.ProductNotFoundException;
 import com.itx.similarproducts.domain.exception.UpstreamServiceException;
 import com.itx.similarproducts.domain.model.ProductDetail;
 import com.itx.similarproducts.infrastructure.adapter.out.http.dto.UpstreamProductDetailDto;
+import com.itx.similarproducts.infrastructure.config.CacheConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -24,6 +28,8 @@ import java.util.Optional;
 @Component
 public class SimuladoProductCatalogAdapter implements ProductCatalogPort {
 
+    private static final Logger log = LoggerFactory.getLogger(SimuladoProductCatalogAdapter.class);
+
     private static final ParameterizedTypeReference<List<String>> STRING_LIST_TYPE =
         new ParameterizedTypeReference<>() {};
 
@@ -34,6 +40,7 @@ public class SimuladoProductCatalogAdapter implements ProductCatalogPort {
     }
 
     @Override
+    @Cacheable(value = CacheConfig.SIMILAR_PRODUCT_IDS_CACHE, key = "#productId")
     public List<String> getSimilarProductIds(String productId) {
         try {
             List<String> ids = restClient.get()
@@ -62,28 +69,36 @@ public class SimuladoProductCatalogAdapter implements ProductCatalogPort {
     }
 
     @Override
+    @Cacheable(
+        value = CacheConfig.PRODUCT_DETAILS_CACHE,
+        key = "#productId",
+        unless = "#result == null"
+    )
     public Optional<ProductDetail> getProductDetail(String productId) {
         try {
             UpstreamProductDetailDto dto = restClient.get()
                 .uri("/product/{productId}", productId)
                 .retrieve()
                 .onStatus(status -> status.isSameCodeAs(HttpStatus.NOT_FOUND), (req, res) -> {
-                    // Handled as empty
-                })
-                .onStatus(HttpStatusCode::is5xxServerError, (req, res) -> {
-                    throw new UpstreamServiceException("Upstream 5xx error for product detail " + productId);
+                    throw new HttpClientErrorException(HttpStatus.NOT_FOUND);
                 })
                 .body(UpstreamProductDetailDto.class);
 
-            return Optional.ofNullable(dto).map(UpstreamProductDetailDto::toDomain);
-        } catch (HttpClientErrorException.NotFound e) {
+            if (dto == null || dto.id() == null) {
+                return Optional.empty();
+            }
+            return Optional.of(dto.toDomain());
+        } catch (HttpClientErrorException e) {
             return Optional.empty();
-        } catch (UpstreamServiceException e) {
-            throw e;
-        } catch (HttpServerErrorException | ResourceAccessException e) {
-            throw new UpstreamServiceException("Failed to retrieve detail for product " + productId + ": " + e.getMessage(), e);
+        } catch (HttpServerErrorException e) {
+            log.warn("Upstream 5xx error for product detail {}: status {}", productId, e.getStatusCode());
+            return Optional.empty();
+        } catch (ResourceAccessException e) {
+            log.warn("Upstream timeout or connection error for product detail {}: {}", productId, e.getMessage());
+            return Optional.empty();
         } catch (Exception e) {
-            throw new UpstreamServiceException("Unexpected error retrieving detail for product " + productId + ": " + e.getMessage(), e);
+            log.warn("Unexpected downstream error for product detail {}: {}", productId, e.getMessage());
+            return Optional.empty();
         }
     }
 }

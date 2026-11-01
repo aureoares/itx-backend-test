@@ -123,14 +123,28 @@ class SimuladoProductCatalogAdapterTest {
     }
 
     @Test
-    void getProductDetail_throwsUpstreamServiceException_when500() {
+    void getProductDetail_returnsEmpty_when500InternalServerError() {
         mockServer.expect(requestTo("http://localhost:3001/product/6"))
             .andExpect(method(HttpMethod.GET))
             .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
-        assertThatThrownBy(() -> adapter.getProductDetail("6"))
-            .isInstanceOf(UpstreamServiceException.class);
+        Optional<ProductDetail> result = adapter.getProductDetail("6");
 
+        assertThat(result).isEmpty();
+        mockServer.verify();
+    }
+
+    @Test
+    void getProductDetail_returnsEmpty_whenTimeoutException() {
+        mockServer.expect(requestTo("http://localhost:3001/product/7"))
+            .andExpect(method(HttpMethod.GET))
+            .andRespond(request -> {
+                throw new org.springframework.web.client.ResourceAccessException("Read timed out");
+            });
+
+        Optional<ProductDetail> result = adapter.getProductDetail("7");
+
+        assertThat(result).isEmpty();
         mockServer.verify();
     }
 }

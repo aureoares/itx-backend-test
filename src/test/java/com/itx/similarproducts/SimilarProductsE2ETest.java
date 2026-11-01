@@ -51,4 +51,57 @@ class SimilarProductsE2ETest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getBody()).contains("Product not found: 999");
     }
+
+    @Test
+    void getSimilarProducts_forProduct3_truncatesDelaysAndReturnsProduct100Within3Seconds() {
+        long start = System.currentTimeMillis();
+        ResponseEntity<String> response = restTemplate.getForEntity("/product/3/similar", String.class);
+        long elapsed = System.currentTimeMillis() - start;
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String body = response.getBody();
+        assertThat(body).isNotNull();
+
+        // Product 100 (1000ms delay) succeeds
+        assertThat(body).contains("\"id\":\"100\"", "\"name\":\"Trousers\"");
+
+        // Products 1000 (5000ms delay) and 10000 (50000ms delay) exceed 2500ms timeout and are omitted
+        assertThat(body).doesNotContain("\"id\":\"1000\"");
+        assertThat(body).doesNotContain("\"id\":\"10000\"");
+
+        // Total elapsed time must be bounded by the 2.5s read timeout (+ small overhead, < 4000ms)
+        assertThat(elapsed).isLessThan(4000);
+    }
+
+    @Test
+    void getSimilarProducts_forProduct4_gracefullyOmits404Product5() {
+        ResponseEntity<String> response = restTemplate.getForEntity("/product/4/similar", String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String body = response.getBody();
+        assertThat(body).isNotNull();
+
+        // Products 1 and 2 succeed
+        assertThat(body).contains("\"id\":\"1\"", "\"name\":\"Shirt\"");
+        assertThat(body).contains("\"id\":\"2\"", "\"name\":\"Dress\"");
+
+        // Product 5 (404) is omitted
+        assertThat(body).doesNotContain("\"id\":\"5\"");
+    }
+
+    @Test
+    void getSimilarProducts_forProduct5_gracefullyOmits500Product6() {
+        ResponseEntity<String> response = restTemplate.getForEntity("/product/5/similar", String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String body = response.getBody();
+        assertThat(body).isNotNull();
+
+        // Products 1 and 2 succeed
+        assertThat(body).contains("\"id\":\"1\"", "\"name\":\"Shirt\"");
+        assertThat(body).contains("\"id\":\"2\"", "\"name\":\"Dress\"");
+
+        // Product 6 (500) is omitted
+        assertThat(body).doesNotContain("\"id\":\"6\"");
+    }
 }

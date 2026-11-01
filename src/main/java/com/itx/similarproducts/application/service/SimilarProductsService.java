@@ -4,6 +4,8 @@ import com.itx.similarproducts.application.port.in.GetSimilarProductsUseCase;
 import com.itx.similarproducts.application.port.out.ProductCatalogPort;
 import com.itx.similarproducts.domain.exception.InvalidProductIdException;
 import com.itx.similarproducts.domain.model.ProductDetail;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -16,10 +18,12 @@ import java.util.concurrent.ExecutorService;
 /**
  * Application service implementing GetSimilarProductsUseCase.
  * Dispatches detail requests concurrently across virtual threads while strictly preserving
- * similarity ranking order.
+ * similarity ranking order and gracefully omitting failing items.
  */
 @Service
 public class SimilarProductsService implements GetSimilarProductsUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(SimilarProductsService.class);
 
     private final ProductCatalogPort productCatalogPort;
     private final ExecutorService fanOutExecutor;
@@ -43,18 +47,21 @@ public class SimilarProductsService implements GetSimilarProductsUseCase {
             return Collections.emptyList();
         }
 
-        // Fan out detail queries concurrently in parallel
+        // Fan out detail queries concurrently across virtual threads
         List<CompletableFuture<Optional<ProductDetail>>> futures = similarIds.stream()
             .map(id -> CompletableFuture.supplyAsync(
                 () -> productCatalogPort.getProductDetail(id),
                 fanOutExecutor
-            ))
+            ).exceptionally(ex -> {
+                log.warn("Failed retrieving product detail for similar product {}: {}", id, ex.getMessage());
+                return Optional.empty();
+            }))
             .toList();
 
         // Wait for all concurrent queries to finish
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
-        // Reassemble in original similarity order, filtering any missing products
+        // Reassemble in original similarity order, omitting missing or failed products
         return futures.stream()
             .map(CompletableFuture::join)
             .flatMap(Optional::stream)

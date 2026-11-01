@@ -1,9 +1,9 @@
 ---
 id: ITX-002
 title: Upstream Resilience, Timeouts & In-Memory Caching
-status: enriched
+status: done
 discovery: similar-products
-change: ~
+change: resilience-and-caching
 priority: should
 estimate: 2 SP
 language: en
@@ -94,7 +94,7 @@ Scenario: Performance under high concurrency
 
 ## Definition of Done
 
-- [ ] Resilience acceptance criteria covered by automated tests (WireMock/MockRestServiceServer simulating 404, 500, and timeout delays)
-- [ ] k6 benchmark passes with 200 constant virtual users across all 5 scenarios with 0% application crashes
-- [ ] Spec deltas archived in `openspec/specs/`
-- [ ] Work merged into the integration branch
+- [x] Resilience acceptance criteria covered by automated tests (WireMock/MockRestServiceServer simulating 404, 500, and timeout delays)
+- [x] k6 benchmark passes with 200 constant virtual users across all 5 scenarios with 0% application crashes
+- [x] Spec deltas archived in `openspec/specs/`
+- [x] Work merged into the integration branch
