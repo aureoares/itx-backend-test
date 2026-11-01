@@ -1,9 +1,9 @@
 ---
 id: ITX-001
 title: Similar Products REST Aggregation API
-status: enriched
+status: done
 discovery: similar-products
-change: ~
+change: similar-products-api
 priority: must
 estimate: 3 SP
 language: en
@@ -82,8 +82,8 @@ Scenario: Blank or invalid product ID parameter
 
 ## Definition of Done
 
-- [ ] Acceptance criteria covered by automated tests (unit + integration with MockRestServiceServer/WireMock)
-- [ ] Contract verified against `similarProducts.yaml`
-- [ ] Architectural boundaries verified (Domain, Application, Infrastructure)
-- [ ] Spec deltas archived in `openspec/specs/`
-- [ ] Work merged into the integration branch
+- [x] Acceptance criteria covered by automated tests (unit + integration with MockRestServiceServer/WireMock)
+- [x] Contract verified against `similarProducts.yaml`
+- [x] Architectural boundaries verified (Domain, Application, Infrastructure)
+- [x] Spec deltas archived in `openspec/specs/`
+- [x] Work merged into the integration branch (master)
